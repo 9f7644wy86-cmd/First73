@@ -3,356 +3,234 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Волейбол Mini App</title>
+  <title>Генератор мемов — Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
       margin: 0;
       padding: 0;
-      overflow: hidden;
-      background: #87CEEB;
-      font-family: Arial, sans-serif;
-      color: white;
-      touch-action: none; /* для лучшего тача на мобиле */
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--tg-theme-bg-color, #000);
+      color: var(--tg-theme-text-color, #fff);
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-    #game-container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
+    .container {
+      padding: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin: 12px 0;
+      font-size: 24px;
     }
     canvas {
-      display: block;
       width: 100%;
-      height: 100%;
-      image-rendering: pixelated;
+      border: 2px solid var(--tg-theme-button-color, #0088cc);
+      border-radius: 12px;
+      background: #222;
+      display: block;
+      margin: 16px auto;
     }
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      pointer-events: none;
-      z-index: 10;
+    .controls {
+      display: grid;
+      gap: 12px;
     }
-    #score {
-      font-size: 32px;
-      margin: 10px;
-      text-shadow: 2px 2px 4px #000;
+    input, select, button {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #444;
+      background: var(--tg-theme-bg-color, #111);
+      color: var(--tg-theme-text-color, #fff);
     }
-    #message {
-      font-size: 24px;
-      margin: 10px;
-      text-shadow: 2px 2px 4px #000;
-    }
-    #controls {
-      position: absolute;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: space-between;
-      padding: 0 30px;
-      pointer-events: auto;
-      z-index: 10;
-    }
-    .btn {
-      width: 80px;
-      height: 80px;
-      background: rgba(255,255,255,0.3);
-      border: 3px solid white;
-      border-radius: 50%;
-      font-size: 40px;
+    button {
+      background: var(--tg-theme-button-color, #0088cc);
       color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      touch-action: manipulation;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
     }
-    .btn:active {
-      background: rgba(255,255,255,0.5);
+    button:active {
+      opacity: 0.8;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+    .row > * { flex: 1; }
+    .templates {
+      display: flex;
+      overflow-x: auto;
+      gap: 12px;
+      padding: 12px 0;
+    }
+    .template-thumb {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    .template-thumb.active {
+      border-color: #00ff88;
+    }
+    #download {
+      margin-top: 16px;
+      width: 100%;
     }
   </style>
 </head>
 <body>
 
-<div id="game-container">
-  <canvas id="canvas"></canvas>
-  <div id="ui">
-    <div id="score">0 : 0</div>
-    <div id="message">Коснись экрана чтобы начать</div>
+<div class="container">
+  <h1>Генератор мемов</h1>
+
+  <div class="templates">
+    <img class="template-thumb active" src="https://i.imgflip.com/1bij.jpg" data-src="https://i.imgflip.com/1bij.jpg" alt="Drake">
+    <img class="template-thumb" src="https://i.imgflip.com/30b1gy.jpg" data-src="https://i.imgflip.com/30b1gy.jpg" alt="Distracted Boyfriend">
+    <img class="template-thumb" src="https://i.imgflip.com/1ur9b0.jpg" data-src="https://i.imgflip.com/1ur9b0.jpg" alt="Expanding Brain">
+    <img class="template-thumb" src="https://i.imgflip.com/1g8my4.jpg" data-src="https://i.imgflip.com/1g8my4.jpg" alt="Two Buttons">
   </div>
-  <div id="controls">
-    <div class="btn" id="left">←</div>
-    <div class="btn" id="jump">↑</div>
-    <div class="btn" id="right">→</div>
+
+  <canvas id="memeCanvas" width="500" height="500"></canvas>
+
+  <div class="controls">
+    <input type="file" id="imageUpload" accept="image/*">
+
+    <div class="row">
+      <input type="text" id="topText" placeholder="Верхний текст" maxlength="60">
+      <input type="text" id="bottomText" placeholder="Нижний текст" maxlength="60">
+    </div>
+
+    <div class="row">
+      <select id="fontSize">
+        <option value="36">Размер 36</option>
+        <option value="48" selected>Размер 48</option>
+        <option value="60">Размер 60</option>
+        <option value="72">Размер 72</option>
+      </select>
+      <select id="fontColor">
+        <option value="white">Белый</option>
+        <option value="black">Чёрный</option>
+        <option value="yellow">Жёлтый</option>
+        <option value="#ff0000">Красный</option>
+      </select>
+    </div>
+
+    <button id="generate">Обновить мем</button>
+    <button id="download">Скачать мем</button>
   </div>
 </div>
 
 <script>
-// Telegram WebApp
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
+tg.MainButton.setText("Поделиться мемом").hide();
 
-// Canvas setup
-const canvas = document.getElementById('canvas');
+const canvas = document.getElementById('memeCanvas');
 const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const messageEl = document.getElementById('message');
+let currentImage = new Image();
 
-// Адаптация под экран
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
+const defaultImg = 'https://i.imgflip.com/1bij.jpg';
+currentImage.crossOrigin = "anonymous";
+currentImage.src = defaultImg;
 
-// Константы
-const GRAVITY = 0.38;
-const NET_X = canvas.width / 2;
-const NET_WIDTH = 12;
-const NET_HEIGHT = canvas.height * 0.6;
-const PLAYER_WIDTH = 60;
-const PLAYER_HEIGHT = 100;
-const BALL_RADIUS = 18;
-const PLAYER_SPEED = 5.5;
-const JUMP_POWER = -12;
-
-// Объекты
-let ball = { x: canvas.width/2, y: 200, vx: 0, vy: 0, lastHit: 'none' };
-let player = { x: canvas.width*0.25, y: canvas.height-PLAYER_HEIGHT-20, vx: 0, jumping: false, score: 0 };
-let computer = { x: canvas.width*0.75, y: canvas.height-PLAYER_HEIGHT-20, score: 0 };
-let keys = {};
-let gameRunning = false;
-let serve = 'player'; // кто подаёт первым
-
-// Управление (клавиатура + тач)
-const leftBtn = document.getElementById('left');
-const rightBtn = document.getElementById('right');
-const jumpBtn = document.getElementById('jump');
-
-function addControl(el, key) {
-  el.addEventListener('touchstart', e => { e.preventDefault(); keys[key] = true; });
-  el.addEventListener('touchend',   e => { e.preventDefault(); keys[key] = false; });
-}
-addControl(leftBtn,  'a');
-addControl(rightBtn, 'd');
-addControl(jumpBtn,  ' ');
-
-// Клавиатура (для теста на ПК)
-window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
-window.addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
-
-// Старт игры по любому касанию/клику
-canvas.addEventListener('touchstart', startGame, {once: true});
-canvas.addEventListener('click', startGame, {once: true});
-
-function startGame() {
-  if (!gameRunning) {
-    gameRunning = true;
-    messageEl.textContent = '';
-    resetBall();
-    loop();
-  }
-}
-
-function resetBall() {
-  ball.x = serve === 'player' ? canvas.width*0.3 : canvas.width*0.7;
-  ball.y = 150;
-  ball.vx = serve === 'player' ? 3 : -3;
-  ball.vy = -8;
-  ball.lastHit = 'none';
-}
-
-function resetPositions() {
-  player.x = canvas.width*0.25;
-  computer.x = canvas.width*0.75;
-}
-
-// Главный цикл
-function loop() {
-  if (!gameRunning) return;
-
-  update();
-  draw();
-
-  requestAnimationFrame(loop);
-}
-
-function update() {
-  // Игрок
-  player.vx = 0;
-  if (keys['a'] || keys['arrowleft'])  player.vx = -PLAYER_SPEED;
-  if (keys['d'] || keys['arrowright']) player.vx =  PLAYER_SPEED;
-
-  player.x += player.vx;
-  player.x = Math.max(0, Math.min(NET_X - PLAYER_WIDTH - 10, player.x));
-
-  // Прыжок
-  if ((keys[' '] || keys['w'] || keys['arrowup']) && !player.jumping) {
-    player.vy = JUMP_POWER;
-    player.jumping = true;
-    tg.HapticFeedback.impactOccurred('medium');
-  }
-
-  if (player.jumping) {
-    player.y += player.vy;
-    player.vy += GRAVITY;
-    if (player.y >= canvas.height - PLAYER_HEIGHT - 20) {
-      player.y = canvas.height - PLAYER_HEIGHT - 20;
-      player.jumping = false;
-      player.vy = 0;
-    }
-  }
-
-  // Компьютер (простой AI)
-  let targetX = ball.x + ball.vx * 12; // предсказание
-  if (ball.vx > 0) { // только когда мяч летит к нему
-    if (computer.x + PLAYER_WIDTH/2 < targetX - 30) {
-      computer.x += PLAYER_SPEED * 0.9;
-    } else if (computer.x + PLAYER_WIDTH/2 > targetX + 30) {
-      computer.x -= PLAYER_SPEED * 0.9;
-    }
-    computer.x = Math.max(NET_X + 10, Math.min(canvas.width - PLAYER_WIDTH, computer.x));
-  }
-
-  // Прыжок компьютера
-  if (ball.y < computer.y + PLAYER_HEIGHT/2 && ball.vy > 0 && Math.abs(ball.x - computer.x - PLAYER_WIDTH/2) < 80) {
-    if (!computer.jumping) {
-      computer.vy = JUMP_POWER - 1.5; // чуть слабее игрока
-      computer.jumping = true;
-    }
-  }
-  if (computer.jumping) {
-    computer.y += computer.vy;
-    computer.vy += GRAVITY;
-    if (computer.y >= canvas.height - PLAYER_HEIGHT - 20) {
-      computer.y = canvas.height - PLAYER_HEIGHT - 20;
-      computer.jumping = false;
-      computer.vy = 0;
-    }
-  }
-
-  // Мяч
-  ball.x += ball.vx;
-  ball.y += ball.vy;
-  ball.vy += GRAVITY;
-
-  // Удар игрока
-  if (Math.abs(ball.x - (player.x + PLAYER_WIDTH/2)) < BALL_RADIUS + PLAYER_WIDTH/2 &&
-      Math.abs(ball.y - (player.y + PLAYER_HEIGHT/2)) < BALL_RADIUS + PLAYER_HEIGHT/2) {
-    ball.lastHit = 'player';
-    ball.vx = (ball.x - (player.x + PLAYER_WIDTH/2)) * 0.25 + player.vx * 0.4;
-    ball.vy = -Math.abs(ball.vy) * 0.8 - 4; // вверх
-    tg.HapticFeedback.impactOccurred('light');
-  }
-
-  // Удар компьютера
-  if (Math.abs(ball.x - (computer.x + PLAYER_WIDTH/2)) < BALL_RADIUS + PLAYER_WIDTH/2 &&
-      Math.abs(ball.y - (computer.y + PLAYER_HEIGHT/2)) < BALL_RADIUS + PLAYER_HEIGHT/2) {
-    ball.lastHit = 'computer';
-    ball.vx = (ball.x - (computer.x + PLAYER_WIDTH/2)) * 0.22 + (Math.random()-0.5)*2;
-    ball.vy = -Math.abs(ball.vy) * 0.75 - 3;
-  }
-
-  // Отскок от стен
-  if (ball.x < BALL_RADIUS || ball.x > canvas.width - BALL_RADIUS) {
-    ball.vx *= -0.8;
-    ball.x = ball.x < BALL_RADIUS ? BALL_RADIUS : canvas.width - BALL_RADIUS;
-  }
-
-  // Пропуск мяча → очко
-  if (ball.y > canvas.height + BALL_RADIUS*2) {
-    if (ball.lastHit === 'player' || (ball.lastHit === 'none' && serve === 'computer')) {
-      player.score++;
-    } else {
-      computer.score++;
-    }
-
-    scoreEl.textContent = `${player.score} : ${computer.score}`;
-
-    if (player.score >= 5 || computer.score >= 5) {
-      messageEl.textContent = player.score >= 5 ? 'Ты победил! 🎉' : 'Компьютер победил 😔';
-      tg.HapticFeedback.notificationOccurred('success');
-      gameRunning = false;
-      setTimeout(() => {
-        player.score = computer.score = 0;
-        serve = serve === 'player' ? 'computer' : 'player';
-        messageEl.textContent = 'Коснись экрана чтобы начать';
-        canvas.addEventListener('touchstart', startGame, {once: true});
-      }, 3000);
-      return;
-    }
-
-    serve = ball.lastHit === 'player' ? 'computer' : 'player';
-    resetBall();
-    resetPositions();
-  }
-
-  // Сетка (простая коллизия)
-  if (Math.abs(ball.x - NET_X) < BALL_RADIUS + NET_WIDTH/2 &&
-      ball.y > canvas.height - NET_HEIGHT) {
-    ball.vx *= -0.85;
-    ball.x += ball.vx * 2;
-  }
-}
-
-// Отрисовка
-function draw() {
+function drawMeme() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Поле (песок)
-  ctx.fillStyle = '#F4A460';
-  ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
+  // Рисуем изображение (масштабируем под canvas)
+  const ratio = Math.min(canvas.width / currentImage.width, canvas.height / currentImage.height);
+  const w = currentImage.width * ratio;
+  const h = currentImage.height * ratio;
+  const x = (canvas.width - w) / 2;
+  const y = (canvas.height - h) / 2;
+  ctx.drawImage(currentImage, x, y, w, h);
 
-  // Небо градиент
-  const grd = ctx.createLinearGradient(0,0,0,canvas.height-120);
-  grd.addColorStop(0, '#87CEEB');
-  grd.addColorStop(1, '#E0F7FA');
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, canvas.width, canvas.height-120);
+  // Текст настройки
+  const top = document.getElementById('topText').value.toUpperCase();
+  const bottom = document.getElementById('bottomText').value.toUpperCase();
+  const fontSize = parseInt(document.getElementById('fontSize').value);
+  const color = document.getElementById('fontColor').value;
 
-  // Сетка
-  ctx.fillStyle = '#8B4513';
-  ctx.fillRect(NET_X - NET_WIDTH/2, canvas.height - NET_HEIGHT - 20, NET_WIDTH, NET_HEIGHT);
+  ctx.font = `bold ${fontSize}px Impact, Arial, sans-serif`;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'black';
+  ctx.lineWidth = fontSize / 15;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
-  // Игрок (человек)
-  ctx.fillStyle = '#00BFFF';
-  ctx.fillRect(player.x, player.y, PLAYER_WIDTH, PLAYER_HEIGHT);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(player.x + 15, player.y + 20, PLAYER_WIDTH-30, 30); // голова/лицо
+  // Верхний текст
+  if (top) {
+    ctx.strokeText(top, canvas.width/2, fontSize * 1.2);
+    ctx.fillText(top, canvas.width/2, fontSize * 1.2);
+  }
 
-  // Компьютер
-  ctx.fillStyle = '#FF4500';
-  ctx.fillRect(computer.x, computer.y, PLAYER_WIDTH, PLAYER_HEIGHT);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(computer.x + 15, computer.y + 20, PLAYER_WIDTH-30, 30);
-
-  // Мяч
-  ctx.fillStyle = '#FFD700';
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle = '#DAA520';
-  ctx.lineWidth = 4;
-  ctx.stroke();
-
-  // Линия посередине
-  ctx.strokeStyle = 'white';
-  ctx.setLineDash([10, 15]);
-  ctx.beginPath();
-  ctx.moveTo(NET_X, 0);
-  ctx.lineTo(NET_X, canvas.height);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  // Нижний текст
+  if (bottom) {
+    ctx.strokeText(bottom, canvas.width/2, canvas.height - fontSize * 0.8);
+    ctx.fillText(bottom, canvas.width/2, canvas.height - fontSize * 0.8);
+  }
 }
 
-// Запуск
-resize();
-draw(); // начальный экран
+// Загрузка своей картинки
+document.getElementById('imageUpload').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      currentImage.src = ev.target.result;
+      currentImage.onload = drawMeme;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// Шаблоны
+document.querySelectorAll('.template-thumb').forEach(img => {
+  img.addEventListener('click', () => {
+    document.querySelectorAll('.template-thumb').forEach(i => i.classList.remove('active'));
+    img.classList.add('active');
+    currentImage.src = img.dataset.src;
+    currentImage.onload = drawMeme;
+  });
+});
+
+// Обновление при вводе
+['topText', 'bottomText', 'fontSize', 'fontColor'].forEach(id => {
+  document.getElementById(id).addEventListener('input', drawMeme);
+});
+
+document.getElementById('generate').addEventListener('click', drawMeme);
+
+// Скачивание
+document.getElementById('download').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'мой_мем.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  tg.HapticFeedback.notificationOccurred('success');
+});
+
+// Первая отрисовка
+currentImage.onload = drawMeme;
+
+// Telegram интеграция
+tg.MainButton.onClick(() => {
+  canvas.toBlob(blob => {
+    const file = new File([blob], "мем.png", { type: "image/png" });
+    tg.sendData(JSON.stringify({ action: "share_meme" })); // можно передать данные боту
+    tg.close(); // или оставить открытым
+  }, 'image/png');
+});
+
+// Автоматически показываем кнопку поделиться после генерации
+document.getElementById('generate').addEventListener('click', () => {
+  tg.MainButton.show();
+});
 </script>
 </body>
 </html>
